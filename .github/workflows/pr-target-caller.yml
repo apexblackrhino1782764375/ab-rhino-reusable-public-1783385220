@@ -1,0 +1,14 @@
+name: PR Target → Local Reusable Caller
+
+'on':
+  pull_request_target:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+
+jobs:
+  call_local_reusable:
+    uses: ./.github/workflows/local-reusable.yml
+    with:
+      marker: BASE
