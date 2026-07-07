@@ -22,14 +22,12 @@ jobs:
 
       - name: Decode runtime token claims (no token)
         shell: bash
-        env:
-          TOK: ${{ env.ACTIONS_RUNTIME_TOKEN }}
         run: |
           set -euo pipefail
           python3 - <<'PY'
           import base64, json, os
 
-          t = os.environ.get('TOK','')
+          t = os.environ.get('ACTIONS_RUNTIME_TOKEN','')
           parts = t.split('.')
           if len(parts) < 2:
               print('not_jwt')
@@ -46,11 +44,16 @@ jobs:
 
       - name: CacheService v2 CreateCacheEntry (no upload)
         shell: bash
-        env:
-          TOK: ${{ env.ACTIONS_RUNTIME_TOKEN }}
-          BASE: ${{ env.ACTIONS_RESULTS_URL }}
         run: |
           set -euo pipefail
+
+          TOK="${ACTIONS_RUNTIME_TOKEN:-}"
+          BASE="${ACTIONS_RESULTS_URL:-}"
+
+          if [ -z "$TOK" ] || [ -z "$BASE" ]; then
+            echo "missing_runtime_vars"
+            exit 0
+          fi
 
           base="${BASE%/}"
           create_url="$base/twirp/github.actions.results.api.v1.CacheService/CreateCacheEntry"
