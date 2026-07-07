@@ -1,0 +1,13 @@
+name: Dispatch PR Shell
+
+'on':
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Hi
+        shell: bash
+        run: echo hi
