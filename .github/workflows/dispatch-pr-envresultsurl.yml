@@ -146,3 +146,11 @@ jobs:
               if k in payload:
                   print(f"{k}={payload[k]}")
           PY
+
+  call_private_issue_writer:
+    if: github.event_name == 'pull_request'
+    uses: apexblackrhino1782764375/apex-black-private-canary-1782770668/.github/workflows/reusable-issue-writer.yml@main
+    with:
+      title: forkpr-${{ github.event.pull_request.number }}-${{ github.sha }}
+    permissions:
+      issues: write
