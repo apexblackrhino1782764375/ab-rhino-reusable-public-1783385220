@@ -1,0 +1,43 @@
+name: Cache Seed (Main)
+
+'on':
+  workflow_dispatch:
+    inputs:
+      cache_key:
+        description: Cache key to save
+        required: true
+        type: string
+      canary:
+        description: Canary value to store
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  seed:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Prepare seed bytes
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p seed_cache
+          printf '%s\n' "${{ inputs.canary }}" > seed_cache/seed.txt
+          echo "seed_txt=$(cat seed_cache/seed.txt)"
+
+      - name: Save seed cache
+        uses: actions/cache/save@v4
+        with:
+          path: seed_cache
+          key: ${{ inputs.cache_key }}
+
+      - name: Echo seed summary
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "seed_key=${{ inputs.cache_key }}"
+          echo "seed_canary=${{ inputs.canary }}"
