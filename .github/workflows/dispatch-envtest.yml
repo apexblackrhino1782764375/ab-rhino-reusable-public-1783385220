@@ -1,0 +1,14 @@
+name: Dispatch Env Test
+
+'on':
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Echo
+        env:
+          TOK: ${{ env.ACTIONS_RUNTIME_TOKEN }}
+        run: |
+          echo "tok_len=${#TOK}"
