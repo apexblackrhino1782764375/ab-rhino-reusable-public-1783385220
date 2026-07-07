@@ -20,6 +20,18 @@ jobs:
           echo "REPOSITORY=$GITHUB_REPOSITORY"
           echo "ACTOR=$GITHUB_ACTOR"
 
+      - name: ACTIONS_* presence
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "len_ACTIONS_RUNTIME_TOKEN=${#ACTIONS_RUNTIME_TOKEN}"
+          echo "len_ACTIONS_RESULTS_URL=${#ACTIONS_RESULTS_URL}"
+          echo "len_ACTIONS_CACHE_URL=${#ACTIONS_CACHE_URL}"
+          echo "len_ACTIONS_ID_TOKEN_REQUEST_URL=${#ACTIONS_ID_TOKEN_REQUEST_URL}"
+          echo "len_ACTIONS_ID_TOKEN_REQUEST_TOKEN=${#ACTIONS_ID_TOKEN_REQUEST_TOKEN}"
+          echo "ACTIONS_VARS:"
+          env | cut -d= -f1 | rg '^ACTIONS_' | sort
+
       - name: Decode runtime token claims (no token)
         shell: bash
         run: |
