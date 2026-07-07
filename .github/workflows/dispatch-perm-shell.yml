@@ -1,0 +1,15 @@
+name: Dispatch Perm Shell
+
+'on':
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Show context
+        shell: bash
+        run: echo hi
