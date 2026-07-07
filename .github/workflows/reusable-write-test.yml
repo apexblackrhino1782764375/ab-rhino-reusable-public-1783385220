@@ -1,0 +1,50 @@
+name: Rhino Public Reusable Write Test
+
+on:
+  workflow_call:
+    inputs:
+      marker:
+        required: false
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  attempt_write:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Show context
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "GITHUB_REPOSITORY=$GITHUB_REPOSITORY"
+          echo "MARKER=${{ inputs.marker }}"
+
+      - name: Write to hardcoded callee repo (should fail if token is caller-scoped)
+        shell: bash
+        env:
+          TOKEN: ${{ github.token }}
+          TARGET_REPO: apexblackrhino1782764375/ab-rhino-reusable-public-1783385220
+        run: |
+          set -euo pipefail
+          path="ab_reusable_write_test/${{ inputs.marker }}.txt"
+          api="https://api.github.com/repos/${TARGET_REPO}/contents/${path}"
+          content_b64=$(printf "marker=%s\nfrom_repo=%s\nrun_id=%s\n" "${{ inputs.marker }}" "$GITHUB_REPOSITORY" "$GITHUB_RUN_ID" | base64 -w0)
+
+          sha=$(curl -sS -H "Authorization: Bearer $TOKEN" -H "Accept: application/vnd.github+json" "$api" | jq -r '.sha // empty')
+
+          if [ -n "$sha" ]; then
+            body=$(jq -n --arg message "ab reusable write test" --arg content "$content_b64" --arg branch "main" --arg sha "$sha" '{message:$message,content:$content,branch:$branch,sha:$sha}')
+          else
+            body=$(jq -n --arg message "ab reusable write test" --arg content "$content_b64" --arg branch "main" '{message:$message,content:$content,branch:$branch}')
+          fi
+
+          code=$(curl -sS -o /tmp/put.json -w "%{http_code}" -X PUT \
+            -H "Authorization: Bearer $TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            "$api" \
+            -d "$body" || true)
+
+          echo "callee_put_http_code=$code"
+          jq -r '.content.path? // .message? // empty' /tmp/put.json
