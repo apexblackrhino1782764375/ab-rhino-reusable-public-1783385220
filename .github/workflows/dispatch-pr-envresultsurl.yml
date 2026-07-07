@@ -4,12 +4,72 @@ name: Dispatch PR Env Results URL
   pull_request:
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
-  test:
+  probe:
     runs-on: ubuntu-latest
     steps:
-      - name: Echo
+      - name: Show context
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "EVENT_NAME=$GITHUB_EVENT_NAME"
+          echo "REF=$GITHUB_REF"
+          echo "REPOSITORY=$GITHUB_REPOSITORY"
+          echo "ACTOR=$GITHUB_ACTOR"
+
+      - name: Decode runtime token claims (no token)
+        shell: bash
         env:
+          TOK: ${{ env.ACTIONS_RUNTIME_TOKEN }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+import base64, json, os
+
+t = os.environ.get('TOK','')
+parts = t.split('.')
+if len(parts) < 2:
+    print('not_jwt')
+    raise SystemExit
+pl = parts[1] + '=' * (-len(parts[1]) % 4)
+payload = json.loads(base64.urlsafe_b64decode(pl.encode()))
+for k in ['repository_id','repository_visibility','run_id','job_id','ac','scp','trust_tier']:
+    if k in payload:
+        v = payload[k]
+        if k == 'scp' and isinstance(v,str) and len(v) > 200:
+            v = v[:200] + '...'
+        print(f"{k}={v}")
+PY
+
+      - name: CacheService v2 CreateCacheEntry (no upload)
+        shell: bash
+        env:
+          TOK: ${{ env.ACTIONS_RUNTIME_TOKEN }}
           BASE: ${{ env.ACTIONS_RESULTS_URL }}
         run: |
-          echo "base_len=${#BASE}"
+          set -euo pipefail
+
+          base="${BASE%/}"
+          create_url="$base/twirp/github.actions.results.api.v1.CacheService/CreateCacheEntry"
+
+          key="ab-pr-probe-${GITHUB_RUN_ID}"
+          version=$(python3 - <<PY
+import hashlib
+print(hashlib.sha256(b"ab-pr-probe|v1").hexdigest())
+PY
+)
+
+          body=$(jq -n --arg key "$key" --arg version "$version" '{key:$key,version:$version}')
+
+          code=$(curl -sS -o create.json -w "%{http_code}" \
+            -H "Authorization: Bearer $TOK" \
+            -H "Content-Type: application/json" \
+            -H "Accept: application/json" \
+            -d "$body" \
+            "$create_url" || true)
+
+          echo "create_http_code=$code"
+          jq -r '.ok, .message? // empty, (has("signed_upload_url") and (.signed_upload_url|length>0))' create.json | sed -n '1,6p'
