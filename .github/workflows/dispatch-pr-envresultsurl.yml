@@ -41,7 +41,7 @@ jobs:
           echo "len_ACTIONS_ID_TOKEN_REQUEST_URL=${#idu}"
           echo "len_ACTIONS_ID_TOKEN_REQUEST_TOKEN=${#idt}"
           echo "ACTIONS_VARS:"
-          env | cut -d= -f1 | rg '^ACTIONS_' | sort
+          env | cut -d= -f1 | grep '^ACTIONS_' | sort
 
       - name: Decode runtime token claims (no token)
         shell: bash
