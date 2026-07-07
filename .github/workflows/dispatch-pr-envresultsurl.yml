@@ -103,34 +103,31 @@ jobs:
             exit 0
           fi
           AUD="apex-black-oidc-test"
-          import subprocess
-          AUD="apex-black-oidc-test"
-          resp = subprocess.check_output(["curl","-sS","-H",f"Authorization: bearer {os.environ.get("ACTIONS_ID_TOKEN_REQUEST_TOKEN","")}",f"{os.environ.get("ACTIONS_ID_TOKEN_REQUEST_URL","")}&audience={AUD}"]).decode()
-          # Do NOT print the token value; decode payload only
-          python3 - <<'PY'
-          import base64, json, os, sys
-          resp = os.environ.get('RESP','')
+          resp="$(curl -sS -H "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=${AUD}")"
+          python3 - <<'PY' <<<"$resp"
+          import sys, json, base64
+          resp = sys.stdin.read()
           try:
-            data = json.loads(resp)
-          except Exception as e:
-            print('oidc_response_not_json')
-            print(resp[:200])
-            raise SystemExit(0)
+              data = json.loads(resp)
+          except Exception:
+              print('oidc_response_not_json')
+              print(resp[:200])
+              raise SystemExit(0)
           tok = data.get('value','')
           parts = tok.split('.')
           if len(parts) < 2:
-            print('oidc_token_missing_or_not_jwt')
-            raise SystemExit(0)
+              print('oidc_token_missing_or_not_jwt')
+              raise SystemExit(0)
           pl = parts[1] + '=' * (-len(parts[1]) % 4)
           payload = json.loads(base64.urlsafe_b64decode(pl.encode()))
-          # print a safe subset of claims
-          safe = {k: payload.get(k) for k in [
-            'iss','aud','sub','repository','repository_id','ref','sha','workflow','job_workflow_ref',
-            'run_id','run_number','run_attempt','actor','actor_id','event_name','environment'
-          ] if k in payload}
+          safe_keys = [
+              'iss','aud','sub','repository','repository_id','ref','sha','workflow','job_workflow_ref',
+              'run_id','run_number','run_attempt','actor','actor_id','event_name','environment'
+          ]
+          safe = {k: payload.get(k) for k in safe_keys if k in payload}
           print(json.dumps(safe, sort_keys=True))
           PY
-        
+
       - name: Decode runtime token claims (no token)
         shell: bash
         run: |
