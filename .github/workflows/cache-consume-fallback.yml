@@ -1,0 +1,51 @@
+name: Cache Consume (Restore Keys)
+
+'on':
+  workflow_dispatch:
+    inputs:
+      key:
+        description: Exact cache key to restore
+        required: true
+        type: string
+      restore_prefix:
+        description: Optional restore-keys prefix
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  consume:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Ensure path exists
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p poison_cache
+
+      - name: Restore cache
+        id: restore
+        uses: actions/cache/restore@v4
+        with:
+          path: poison_cache
+          key: ${{ inputs.key }}
+          restore-keys: |
+            ${{ inputs.restore_prefix }}
+
+      - name: Show restored bytes
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "cache_hit=${{ steps.restore.outputs.cache-hit }}"
+          echo "matched_key=${{ steps.restore.outputs.cache-primary-key }}"
+          echo "exact_key=${{ inputs.key }}"
+          ls -la poison_cache || true
+          if [[ -f poison_cache/poison.txt ]]; then
+            echo "poison_txt=$(cat poison_cache/poison.txt)"
+          else
+            echo "poison_txt=<missing>"
+          fi
