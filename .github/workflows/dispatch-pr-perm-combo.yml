@@ -1,0 +1,14 @@
+name: Dispatch PR Perm Combo
+
+'on':
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  hello:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo combo
