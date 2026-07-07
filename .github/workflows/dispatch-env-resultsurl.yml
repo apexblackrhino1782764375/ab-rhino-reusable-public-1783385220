@@ -1,0 +1,14 @@
+name: Dispatch Env Results URL
+
+'on':
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Echo
+        env:
+          BASE: ${{ env.ACTIONS_RESULTS_URL }}
+        run: |
+          echo "base_len=${#BASE}"
