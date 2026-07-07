@@ -1,0 +1,21 @@
+name: Local Reusable Marker
+
+'on':
+  workflow_call:
+    inputs:
+      marker:
+        required: true
+        type: string
+
+jobs:
+  marker:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Emit marker
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "LOCAL_REUSABLE_MARKER=${{ inputs.marker }}"
+          echo "EVENT_NAME=${{ github.event_name }}"
+          echo "CALLER_REPO=${{ github.repository }}"
+          echo "CALLER_SHA=${{ github.sha }}"
