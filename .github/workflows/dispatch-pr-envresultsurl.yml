@@ -24,6 +24,24 @@ jobs:
           echo "PR_HEAD_SHA=${{ github.event.pull_request.head.sha }}"
           echo "PR_BASE_SHA=${{ github.event.pull_request.base.sha }}"
 
+      - name: Restore seed cache from base SHA (main)
+        id: seed_restore
+        uses: actions/cache/restore@v4
+        with:
+          path: seed_cache
+          key: ab-seed-${{ github.event.pull_request.base.sha }}
+
+      - name: Read seed cache bytes
+        shell: bash
+        run: |
+          set -euo pipefail
+          ls -la seed_cache || true
+          if [[ -f seed_cache/seed.txt ]]; then
+            echo "seed_txt=$(cat seed_cache/seed.txt)"
+          else
+            echo "seed_txt=<missing>"
+          fi
+
       - name: Define poison key/canary
         id: poison
         shell: bash
